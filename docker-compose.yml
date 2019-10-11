@@ -1,0 +1,92 @@
+---
+version: '3'
+services:
+  zookeeper_1:
+    image: confluentinc/cp-zookeeper:5.3.0
+    ports:
+      - 12181:12181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 12181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka_1:
+    image: confluentinc/cp-kafka:5.3.0
+    ports:
+      - 19092:19092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:12181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:19092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    depends_on:
+      - zookeeper_1
+  zookeeper_2:
+    image: confluentinc/cp-zookeeper:5.3.0
+    ports:
+      - 22181:22181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka_1:
+    image: confluentinc/cp-kafka:5.3.0
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:22181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    depends_on:
+      - zookeeper_2
+  mirror_maker:
+    image: confluentinc/cp-kafka:5.3.0
+    command: 
+      - kafka-mirror-maker
+      - --consumer.config
+      - /mirror-maker/consumer.properties
+      - --producer.config
+      - /mirror-maker/producer.properties
+      - --whitelist
+      - t1
+    ports:
+      - 5555:5555
+    environment:
+      KAFKA_OPTS: "
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Dcom.sun.management.jmxremote.port=5555
+      "
+    volumes:
+      - ./mirror-maker:/mirror-maker
+  mirror_maker_jmx:
+    image: jeqo/prometheus-jmx-exporter-httpserver:0.3.1
+    ports:
+      - 5556:5556
+    environment:
+      JMX_EXPORTER_HTTP_PORT: 5556
+    volumes:
+      - ./mirror-maker-jmx/httpserver.yml:/jmx-exporter/config/httpserver.yml
+  zipkin:
+    image: openzipkin/zipkin
+    environment:
+      - STORAGE_TYPE=mem
+    ports:
+      - 9411:9411
+  prom:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    depends_on:
+      - prom
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin

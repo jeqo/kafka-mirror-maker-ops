@@ -1,0 +1,8 @@
+---
+hostPort: mirror_maker:5555
+username:
+password:
+lowercaseOutputName: true
+
+rules:
+- pattern: ".*"
