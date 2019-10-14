@@ -61,6 +61,7 @@ services:
       "
     volumes:
       - ./mirror-maker:/mirror-maker
+      - ./brave-kafka-interceptor/brave-kafka-interceptor-0.5.0.jar:/usr/share/java/kafka/brave-kafka-interceptor-0.5.0.jar
   mirror_maker_jmx:
     image: jeqo/prometheus-jmx-exporter-httpserver:0.3.1
     ports:
